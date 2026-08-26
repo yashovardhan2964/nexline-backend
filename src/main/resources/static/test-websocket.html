@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>NexLine WebSocket Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body>
+    <h2>NexLine WebSocket Test</h2>
+    <p>Subscribing to Billing queue updates...</p>
+    <div id="events" style="font-family: monospace; background: #f0f0f0; padding: 10px;"></div>
+
+    <script>
+        const socket = new SockJS('http://localhost:8080/ws');
+        const stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+            document.getElementById('events').innerHTML += '<p>✅ Connected to NexLine WebSocket</p>';
+
+            // Subscribe to Billing queue events
+            stompClient.subscribe('/topic/queue/B', function(message) {
+                const event = JSON.parse(message.body);
+                const div = document.getElementById('events');
+                div.innerHTML += '<p>📨 Event: ' + JSON.stringify(event) + '</p>';
+            });
+
+            // Subscribe to Counter 1 events
+            stompClient.subscribe('/topic/counter/1', function(message) {
+                const event = JSON.parse(message.body);
+                const div = document.getElementById('events');
+                div.innerHTML += '<p>🖥️ Counter 1: ' + JSON.stringify(event) + '</p>';
+            });
+        });
+    </script>
+</body>
+</html>
