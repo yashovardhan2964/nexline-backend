@@ -1,0 +1,73 @@
+services:
+
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: nexline-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: nexline123
+      MYSQL_DATABASE: smartqueue
+    ports:
+      - "3307:3306"  # 3307 on host so it doesn't conflict with your local MySQL
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      start_period: 30s
+
+  # Redis
+  redis:
+    image: redis:7.0-alpine
+    container_name: nexline-redis
+    ports:
+      - "6380:6379"  # 6380 on host to avoid conflict with local Redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Python AI Service
+  nexline-ai:
+    build:
+      context: D:/NexLine-AI
+      dockerfile: Dockerfile
+    container_name: nexline-ai
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: [ "CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Spring Boot Backend
+  nexline-app:
+    build:
+      context: D:/Smart_Queue_System/smartqueue
+      dockerfile: Dockerfile
+    container_name: nexline-app
+    ports:
+      - "8080:8080"
+    environment:
+      # Override application.properties values
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/smartqueue
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: nexline123
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      AI_SERVICE_URL: http://nexline-ai:8000
+      JWT_SECRET: NexLineSecretKey2026ThisMustBeAtLeast256BitsLongForHS256Algorithm
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nexline-ai:
+        condition: service_healthy
+
+volumes:
+  mysql_data:
